@@ -1,50 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      overflow: hidden;
-      cursor: none;
-      background-color: #f0f0f0;
-    }
-    .cursor {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
-      transform: scale(1);
-      transition: transform 0.1s ease;
-      pointer-events: none;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    .cursor.active {
-      transform: scale(10);
-      background-color: rgba(255, 100, 100, 0.3);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>커서 확대 드래그 페이지</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-family: Arial, sans-serif;
+            cursor: none; /* 시스템 커서 숨김 */
+            overflow: hidden;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 1;
+            padding: 50px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        p {
+            font-size: 1.2em;
+        }
+        
+        /* 커스텀 커서 스타일 */
+        .custom-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 0, 0, 0.8); /* 빨간 원형 */
+            border: 2px solid white;
+            border-radius: 50%;
+            pointer-events: none; /* 클릭 방해 안 함 */
+            z-index: 9999;
+            transition: all 0.1s ease; /* 부드러운 크기/위치 변화 */
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+        
+        /* 큰 커서 클래스 (10배 확대) */
+        .custom-cursor.large {
+            width: 200px !important;
+            height: 200px !important;
+            background: rgba(255, 0, 0, 0.6);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        }
+    </style>
 </head>
 <body>
-  <div class="cursor"></div>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const cursor = document.querySelector('.cursor');
-      
-      document.addEventListener('mousedown', () => {
-        cursor.classList.add('active');
-      });
-      
-      document.addEventListener('mouseup', () => {
-        cursor.classList.remove('active');
-      });
-      
-      document.addEventListener('mousemove', (e) => {
-        cursor.style.left = `${e.clientX - 10}px`;
-        cursor.style.top = `${e.clientY - 10}px`;
-      });
-    });
-  </script>
+    <div class="content">
+        <h1>🖱️ 커서 확대 테스트</h1>
+        <p>마우스를 누르고 드래그 해보세요! 커서가 10배 커집니다.</p>
+        <p>떼면 원래대로 돌아갑니다. 😊</p>
+    </div>
+    
+    <!-- 커스텀 커서 요소 -->
+    <div class="custom-cursor" id="cursor"></div>
+    
+    <script>
+        const cursor = document.getElementById('cursor');
+        const normalSize = 20;  // 원래 크기
+        const largeSize = 200;  // 10배 크기
+        let isDown = false;
+
+        // 마우스 이동 시 커서 위치 업데이트
+        function updateCursorPosition(x, y) {
+            if (isDown) {
+                // 큰 커서일 때 중앙 정렬
+                cursor.style.left = (x - largeSize / 2) + 'px';
+                cursor.style.top = (y - largeSize / 2) + 'px';
+                cursor.style.width = largeSize + 'px';
+                cursor.style.height = largeSize + 'px';
+            } else {
+                // 작은 커서일 때 중앙 정렬
+                cursor.style.left = (x - normalSize / 2) + 'px';
+                cursor.style.top = (y - normalSize / 2) + 'px';
+                cursor.style.width = normalSize + 'px';
+                cursor.style.height = normalSize + 'px';
+            }
+        }
+
+        // mousemove 이벤트
+        document.addEventListener('mousemove', (e) => {
+            updateCursorPosition(e.clientX, e.clientY);
+        });
+
+        // mousedown 이벤트 (누름)
+        document.addEventListener('mousedown', (e) => {
+            isDown = true;
+            cursor.classList.add('large');
+            updateCursorPosition(e.clientX, e.clientY); // 즉시 위치 업데이트
+        });
+
+        // mouseup 이벤트 (뗌)
+        document.addEventListener('mouseup', (e) => {
+            isDown = false;
+            cursor.classList.remove('large');
+            updateCursorPosition(e.clientX, e.clientY); // 즉시 위치 업데이트
+        });
+
+        // 초기 위치 설정 (페이지 로드 시)
+        updateCursorPosition(0, 0);
+    </script>
 </body>
 </html>
