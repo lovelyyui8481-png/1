@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>테트리스 게임</title>
+    <style>
+        /* CSS 스타일링 */
+        body {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            font-family: 'Press Start 2P', sans-serif; /* 픽셀 느낌의 폰트 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-shadow: 3px 3px 0 #000;
+        }
+
+        .game-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 30px;
+            border: 5px solid #34495e;
+            padding: 20px;
+            background-color: #34495e;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #ecf0f1;
+            background-color: #000;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 180px;
+        }
+
+        .sidebar div {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #score, #lines {
+            font-size: 1.5em;
+            color: #f1c40f;
+        }
+        
+        #next-canvas {
+            background-color: #000;
+            border: 2px solid #ecf0f1;
+        }
+
+        #game-over {
+            position: absolute;
+            display: none; /* 초기에는 숨김 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            font-size: 2em;
+            text-shadow: 3px 3px 0 #000;
+            width: 320px; /* 캔버스 너비와 동일 */
+            height: 600px; /* 캔버스 높이와 동일 */
+        }
+        
+        #game-over p {
+            margin: 0;
+        }
+        
+        #game-over small {
+            font-size: 0.5em;
+            margin-top: 20px;
+        }
+
+    </style>
+    <!-- 픽셀 폰트 추가 (선택사항이지만 분위기에 도움이 됩니다) -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="game-container">
+        <div>
+            <h1>TETRIS</h1>
+            <div id="game-board" style="position: relative;">
+                <canvas id="tetris" width="300" height="600"></canvas>
+                <div id="game-over">
+                    <p>GAME OVER</p>
+                    <small>Press F5 to Restart</small>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar">
+            <div>
+                <h2>SCORE</h2>
+                <p id="score">0</p>
+            </div>
+            <div>
+                <h2>LINES</h2>
+                <p id="lines">0</p>
+            </div>
+            <div>
+                <h2>NEXT</h2>
+                <canvas id="next-canvas" width="120" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 게임 로직
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('tetris');
+            const context = canvas.getContext('2d');
+            const nextCanvas = document.getElementById('next-canvas');
+            const nextContext = nextCanvas.getContext('2d');
+
+            const scoreElement = document.getElementById('score');
+            const linesElement = document.getElementById('lines');
+            const gameOverElement = document.getElementById('game-over');
+
+            const ROWS = 20;
+            const COLS = 10;
+            const BLOCK_SIZE = 30;
+            const NEXT_BLOCK_SIZE = 30;
+
+            context.scale(BLOCK_SIZE, BLOCK_SIZE);
+            nextContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
+
+            const COLORS = [
+                null,
+                '#FF0D72', // T
+                '#0DC2FF', // I
+                '#0DFF72', // O
+                '#F538FF', // L
+                '#FF8E0D', // J
+                '#FFE138', // S
+                '#3877FF', // Z
+            ];
+
+            const TETROMINOES = {
+                'T': [[1, 1, 1], [0, 1, 0]],
+                'I': [[2, 2, 2, 2]],
+                'O': [[3, 3], [3, 3]],
+                'L': [[4, 0, 0], [4, 4, 4]],
+                'J': [[0, 0, 5], [5, 5, 5]],
+                'S': [[0, 6, 6], [6, 6, 0]],
+                'Z': [[7, 7, 0], [0, 7, 7]]
+            };
+            
+            let board = createBoard();
+            let player;
+            let nextTetromino;
+            let score = 0;
+            let lines = 0;
+            let dropCounter = 0;
+            let dropInterval = 1000; // 1초
+            let lastTime = 0;
+            let isGameOver = false;
+
+            function createBoard() {
+                return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            }
+
+            function createPiece(type) {
+                if (type === 'T') return TETROMINOES['T'];
+                if (type === 'I') return TETROMINOES['I'];
+                if (type === 'O') return TETROMINOES['O'];
+                if (type === 'L') return TETROMINOES['L'];
+                if (type === 'J') return TETROMINOES['J'];
+                if (type === 'S') return TETROMINOES['S'];
+                if (type === 'Z') return TETROMINOES['Z'];
+            }
+            
+            function getRandomPiece() {
+                const pieces = 'TIOJLsz';
+                const rand = pieces[Math.floor(Math.random() * pieces.length)];
+                return createPiece(rand.toUpperCase());
+            }
+
+            function draw() {
+                // 메인 보드 그리기
+                context.fillStyle = '#000';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                drawMatrix(board, { x: 0, y: 0 }, context);
+                drawMatrix(player.matrix, player.pos, context);
+
+                // 다음 블록 그리기
+                nextContext.fillStyle = '#000';
+                nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+                const nextPieceX = nextTetromino[0].length === 4 ? 0 : 0.5; // I 블록 중앙 정렬
+                const nextPieceY = nextTetromino.length === 4 ? 0 : 0.5;
+                drawMatrix(nextTetromino, {x: nextPieceX, y: nextPieceY}, nextContext);
+            }
+
+            function drawMatrix(matrix, offset, ctx) {
+                matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            ctx.fillStyle = COLORS[value];
+                            ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                        }
+                    });
+                });
+            }
+
+            function merge(board, player) {
+                player.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            board[y + player.pos.y][x + player.pos.x] = value;
+                        }
+                    });
+                });
+            }
+
+            function collide(board, player) {
+                const [m, o] = [player.matrix, player.pos];
+                for (let y = 0; y < m.length; ++y) {
+                    for (let x = 0; x < m[y].length; ++x) {
+                        if (m[y][x] !== 0 &&
+                            (board[y + o.y] && board[y + o.y][x + o.x]) !== 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function rotate(matrix, dir) {
+                for (let y = 0; y < matrix.length; ++y) {
+                    for (let x = 0; x < y; ++x) {
+                        [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                    }
+                }
+                if (dir > 0) {
+                    matrix.forEach(row => row.reverse());
+                } else {
+                    matrix.reverse();
+                }
+            }
+            
+            function playerRotate(dir) {
+                const pos = player.pos.x;
+                let offset = 1;
+                rotate(player.matrix, dir);
+                while (collide(board, player)) {
+                    player.pos.x += offset;
+                    offset = -(offset + (offset > 0 ? 1 : -1));
+                    if (offset > player.matrix[0].length) {
+                        rotate(player.matrix, -dir); // 회전 되돌리기
+                        player.pos.x = pos;
+                        return;
+                    }
+                }
+            }
+
+            function playerMove(offset) {
+                player.pos.x += offset;
+                if (collide(board, player)) {
+                    player.pos.x -= offset;
+                }
+            }
+
+            function playerDrop() {
+                player.pos.y++;
+                if (collide(board, player)) {
+                    player.pos.y--;
+                    merge(board, player);
+                    sweepBoard();
+                    playerReset();
+                }
+                dropCounter = 0;
+            }
+            
+            function playerHardDrop() {
+                while (!collide(board, player)) {
+                    player.pos.y++;
+                }
+                player.pos.y--;
+                merge(board, player);
+                sweepBoard();
+                playerReset();
+                dropCounter = 0;
+            }
+
+            function playerReset() {
+                player = {
+                    pos: { x: Math.floor(COLS / 2) - 1, y: 0 },
+                    matrix: nextTetromino,
+                };
+                nextTetromino = getRandomPiece();
+
+                if (collide(board, player)) {
+                    isGameOver = true;
+                    gameOverElement.style.display = 'flex';
+                }
+            }
+
+            function sweepBoard() {
+                let rowCount = 1;
+                outer: for (let y = board.length - 1; y > 0; --y) {
+                    for (let x = 0; x < board[y].length; ++x) {
+                        if (board[y][x] === 0) {
+                            continue outer;
+                        }
+                    }
+                    const row = board.splice(y, 1)[0].fill(0);
+                    board.unshift(row);
+                    ++y;
+
+                    lines++;
+                    score += rowCount * 10;
+                    rowCount *= 2;
+                }
+                updateScore();
+            }
+
+            function updateScore() {
+                scoreElement.innerText = score;
+                linesElement.innerText = lines;
+            }
+
+            function update(time = 0) {
+                if (isGameOver) return;
+                
+                const deltaTime = time - lastTime;
+                lastTime = time;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    playerDrop();
+                }
+
+                draw();
+                requestAnimationFrame(update);
+            }
+
+            document.addEventListener('keydown', event => {
+                if (isGameOver) return;
+
+                if (event.key === 'ArrowLeft') {
+                    playerMove(-1);
+                } else if (event.key === 'ArrowRight') {
+                    playerMove(1);
+                } else if (event.key === 'ArrowDown') {
+                    playerDrop();
+                } else if (event.key === 'ArrowUp') {
+                    playerRotate(1);
+                } else if (event.key === ' ') { // Space bar for hard drop
+                    event.preventDefault(); // 페이지 스크롤 방지
+                    playerHardDrop();
+                }
+            });
+            
+            function startGame() {
+                board = createBoard();
+                score = 0;
+                lines = 0;
+                updateScore();
+                nextTetromino = getRandomPiece();
+                playerReset();
+                update();
+            }
+
+            startGame();
+        });
+    </script>
+</body>
+</html>
