@@ -3,351 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>사다리게임</title>
+    <title>사다리 게임</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* --- CSS --- */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            background-color: #f4f4f9;
             padding: 20px;
         }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 900px;
-            width: 100%;
-        }
-
         h1 {
-            text-align: center;
             color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
         }
-
-        .setup {
-            margin-bottom: 30px;
-        }
-
-        .input-group {
+        .controls {
             margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
+        .controls label {
+            margin-right: 10px;
             font-weight: bold;
         }
-
-        input[type="number"],
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+        .controls input[type="number"] {
+            padding: 5px;
+            width: 60px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .names-container,
-        .results-container {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .names-container input,
-        .results-container input {
-            flex: 1;
-            min-width: 120px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .controls button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: transform 0.2s;
-            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .controls button:hover {
+            background-color: #45a049;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        #ladder-container {
+            position: relative;
+            background-color: #fff;
+            border: 2px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
-        button:active {
-            transform: translateY(0);
+        /* 사다리 선 */
+        .ladder-line {
+            position: absolute;
+            background-color: #333;
         }
 
-        .btn-container {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        #ladderCanvas {
-            display: block;
-            margin: 30px auto;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            background: white;
-            cursor: pointer;
-        }
-
-        .player-names,
-        .result-names {
-            display: flex;
-            justify-content: space-around;
-            margin: 10px 0;
-        }
-
-        .name-item {
-            padding: 8px 15px;
-            background: #f0f0f0;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .name-item:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .name-item.active {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .result-item {
-            padding: 8px 15px;
-            background: #fff3cd;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .result-message {
+        /* 시작/종료 지점 표시 */
+        .start-point, .end-point {
+            position: absolute;
+            width: 30px;
             text-align: center;
-            font-size: 1.5em;
-            margin: 20px 0;
-            padding: 20px;
-            background: #4CAF50;
-            color: white;
-            border-radius: 10px;
-            animation: fadeIn 0.5s;
+            cursor: pointer;
+            padding: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+        .start-point {
+            top: -30px; /* 컨테이너 위로 */
+            background-color: #eee;
+            border: 1px solid #ccc;
+        }
+        .start-point:hover {
+            background-color: #ddd;
+        }
+        .end-point {
+            bottom: -30px; /* 컨테이너 아래로 */
+        }
+        .result-message {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #D9534F;
+            font-weight: bold;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        #gameArea {
-            animation: slideIn 0.5s;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* 말 (Player Piece) */
+        .player {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #FF9800;
+            border-radius: 50%;
+            top: -40px; /* 시작 위치 */
+            transform: translateX(-50%);
+            transition: top 0.5s ease-in-out, left 0.5s ease-in-out;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 사다리게임</h1>
-        
-        <div id="setupArea" class="setup">
-            <div class="input-group">
-                <label>참가자 수 (2-8명)</label>
-                <input type="number" id="playerCount" min="2" max="8" value="4">
-            </div>
-            
-            <div class="input-group">
-                <label>참가자 이름</label>
-                <div class="names-container" id="playerNames"></div>
-            </div>
-            
-            <div class="input-group">
-                <label>결과 항목</label>
-                <div class="results-container" id="resultItems"></div>
-            </div>
-            
-            <div class="btn-container">
-                <button onclick="generateLadder()">사다리 생성</button>
-            </div>
-        </div>
-        
-        <div id="gameArea" class="hidden">
-            <div class="player-names" id="topNames"></div>
-            <canvas id="ladderCanvas"></canvas>
-            <div class="result-names" id="bottomResults"></div>
-            <div id="resultMessage"></div>
-            <div class="btn-container">
-                <button onclick="resetGame()">다시 하기</button>
-            </div>
-        </div>
+
+    <h1>온라인 사다리 게임</h1>
+
+    <div class="controls">
+        <label for="numLines">가로줄 (칸 수):</label>
+        <input type="number" id="numLines" value="5" min="2" max="20">
+        <label for="numRungs">세로줄 (높이):</label>
+        <input type="number" id="numRungs" value="10" min="3" max="30">
+        <button onclick="initializeLadder()">사다리 생성</button>
     </div>
 
+    <div id="ladder-container">
+        <!-- 사다리 및 시작/종료 지점이 여기에 그려집니다 -->
+    </div>
+
+    <div id="result" class="result-message"></div>
+
     <script>
-        let players = [];
-        let results = [];
-        let ladder = [];
-        let currentPath = [];
+        // --- JavaScript ---
 
-        // 초기 입력 필드 생성
-        document.getElementById('playerCount').addEventListener('input', updateInputFields);
-        updateInputFields();
+        const CONTAINER_ID = 'ladder-container';
+        const START_HEIGHT = 300; // 사다리 총 높이 (픽셀)
+        const START_WIDTH = 500;  // 사다리 총 너비 (픽셀)
+        const GAP_MIN = 50;       // 최소 가로 간격
+        const GAP_MAX = 100;      // 최대 가로 간격
 
-        function updateInputFields() {
-            const count = parseInt(document.getElementById('playerCount').value) || 4;
-            const playerNamesDiv = document.getElementById('playerNames');
-            const resultItemsDiv = document.getElementById('resultItems');
-            
-            playerNamesDiv.innerHTML = '';
-            resultItemsDiv.innerHTML = '';
-            
-            for (let i = 0; i < count; i++) {
-                const playerInput = document.createElement('input');
-                playerInput.type = 'text';
-                playerInput.placeholder = `참가자 ${i + 1}`;
-                playerInput.value = `참가자 ${i + 1}`;
-                playerNamesDiv.appendChild(playerInput);
-                
-                const resultInput = document.createElement('input');
-                resultInput.type = 'text';
-                resultInput.placeholder = `결과 ${i + 1}`;
-                resultInput.value = `결과 ${i + 1}`;
-                resultItemsDiv.appendChild(resultInput);
-            }
-        }
+        let numLines = 5; // 가로줄 수 (칸 수)
+        let numRungs = 10; // 세로줄 수 (높이)
+        let rungHeight; // 각 세로줄의 높이
+        let lineSpacing; // 가로줄 간의 간격 (세로줄 간의 간격)
 
-        function generateLadder() {
-            // 입력값 수집
-            players = Array.from(document.getElementById('playerNames').children)
-                .map(input => input.value || '참가자');
-            results = Array.from(document.getElementById('resultItems').children)
-                .map(input => input.value || '결과');
-            
-            const playerCount = players.length;
-            
-            // 사다리 생성
-            ladder = [];
-            const height = 10; // 사다리 높이
-            
-            for (let i = 0; i < height; i++) {
-                const row = [];
-                for (let j = 0; j < playerCount - 1; j++) {
-                    // 랜덤하게 가로선 생성 (50% 확률)
-                    row.push(Math.random() > 0.5);
-                }
-                ladder.push(row);
+        const container = document.getElementById(CONTAINER_ID);
+        const resultDiv = document.getElementById('result');
+
+        // 사다리 초기화 및 생성
+        function initializeLadder() {
+            // 설정값 가져오기
+            numLines = parseInt(document.getElementById('numLines').value);
+            numRungs = parseInt(document.getElementById('numRungs').value);
+
+            if (numLines < 2 || numRungs < 3) {
+                alert("가로줄은 최소 2개, 세로줄은 최소 3개 이상이어야 합니다.");
+                return;
             }
-            
-            // 각 열에 최소 1개의 가로선 보장
-            for (let j = 0; j < playerCount - 1; j++) {
-                let hasLine = ladder.some(row => row[j]);
-                if (!hasLine) {
-                    const randomRow = Math.floor(Math.random() * height);
-                    ladder[randomRow][j] = true;
-                }
-            }
-            
-            // UI 전환
-            document.getElementById('setupArea').classList.add('hidden');
-            document.getElementById('gameArea').classList.remove('hidden');
-            
+
+            container.innerHTML = ''; // 이전 내용 초기화
+            resultDiv.textContent = ''; // 결과 초기화
+
+            // 사다리 크기 설정
+            rungHeight = START_HEIGHT / numRungs;
+            // 가로줄 간격 (총 너비를 칸 수로 나눔)
+            lineSpacing = START_WIDTH / (numLines + 1);
+
+            container.style.width = `${START_WIDTH}px`;
+            container.style.height = `${START_HEIGHT + 60}px`; // 여유 공간 포함
+
+            // 1. 사다리 줄 그리기
             drawLadder();
+
+            // 2. 시작/종료 지점 생성 및 클릭 이벤트 등록
+            createPoints();
         }
 
         function drawLadder() {
-            const canvas = document.getElementById('ladderCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            const playerCount = players.length;
-            const width = Math.min(800, playerCount * 100 + 100);
-            const height = 500;
-            canvas.width = width;
-            canvas.height = height;
-            
-            const spacing = (width - 100) / (playerCount - 1);
-            const rowHeight = (height - 100) / ladder.length;
-            
-            // 배경 클리어
-            ctx.clearRect(0, 0, width, height);
-            
-            // 세로선 그리기
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 3;
-            
-            for (let i = 0; i < playerCount; i++) {
-                ctx.beginPath();
-                ctx.moveTo(50 + i * spacing, 30);
-                ctx.lineTo(50 + i * spacing, height - 30);
-                ctx.stroke();
-            }
-            
-            // 가로선 그리기
-            ctx.strokeStyle = '#666';
-            ctx.lineWidth = 3;
-            
-            for (let i = 0; i < ladder.length; i++) {
-                for (let j = 0; j < ladder[i].length; j++) {
-                    if (ladder[i][j]) {
-                        const y = 30 + (i + 0.5) * rowHeight;
-                        ctx.beginPath();
-                        ctx.moveTo(50 + j * spacing, y);
-                        ctx.lineTo(50 + (j + 1) * spacing, y);
-                        ctx.stroke();
+            // 임시 저장소: 각 가로줄에서 오른쪽으로 이동할지 (true) 왼쪽으로 이동할지 (false) 결정
+            let connections = [];
+
+            // 사다리 세로줄을 numLines + 1 개 (양쪽 끝 포함) 만큼 그려야 함.
+            // 실제 가로 막대는 numLines 개가 필요.
+            for (let i = 0; i < numRungs; i++) {
+                // 각 세로줄(가로 막대)의 위치를 저장할 배열 초기화
+                if (i === 0) {
+                    connections = Array(numLines).fill(false);
+                } else {
+                    // 새로운 층의 연결 정보 생성
+                    const newConnections = Array(numLines).fill(false);
+                    
+                    // 이전 층의 연결 정보를 기반으로 현재 층의 연결 생성
+                    for (let j = 0; j < numLines; j++) {
+                        const canGoRight = j < numLines - 1 && !connections[j + 1]; // 오른쪽 막대 연결 가능 & 오른쪽 막대가 이미 왼쪽으로 연결되지 않았는지
+                        const canGoLeft = j > 0 && !connections[j - 1]; // 왼쪽 막대 연결 가능 & 왼쪽 막대가 이미 오른쪽으로 연결되지 않았는지
+                        const canStay = !canGoRight && !canGoLeft; // 양쪽에 연결되지 않은 경우
+
+                        if (canStay) {
+                             // 아무데도 연결 안됨
+                             newConnections[j] = false; 
+                        } else if (canGoRight && Math.random() < 0.5) {
+                            // 오른쪽으로 연결 시도 (단, 오른쪽에 이미 연결된 것이 없다면)
+                            newConnections[j] = true;
+                        } else if (canGoLeft && Math.random() < 0.5) {
+                            // 왼쪽으로 연결 시도 (단, 왼쪽에 이미 연결된 것이 없다면)
+                            newConnections[j] = false;
+                        } else {
+                            // 연결 없음
+                            newConnections[j] = false;
+                        }
                     }
+                    connections = newConnections;
                 }
-            }
-            
-            // 상단 참가자 이름 표시
-            const topNames = document.getElementById('topNames');
-            topNames.innerHTML = '';
-            players.forEach((player, i) => {
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'name-item';
-                nameDiv.textContent = player;
-                nameDiv.onclick = () => tracePath(i);
-                topNames.appendChild(nameDiv);
-            });
-            
-            // 하단 결과 표시
-            const bottomResults = document.getElementById('bottomResults');
-            bottomResults.innerHTML = '';
-            results.forEach(result => {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'result-item';
-                resultDiv.textContent = result;
-                bottomResults.appendChild(resultDiv);
-            });
-        
+
+
+                // **실제 사다리 그리기**
+                
+                // 1. 세로 기둥 (전체 numLines + 1 개 필요)
+                for (let k = 0; k <= numLines; k++) {
+                    const x = k * lineSpacing;
+                    const y = i * rungHeight;
+
+                    const rungDiv = document.createElement('div');
+                    rungDiv.className = 'ladder-line';
+                    rungDiv.style.width = '2px';
+                    rungDiv.style.height = `${rungHeight + 2}px`; // 약간 겹치게 하여 이음매 제거
+                    rungDiv.style.left = `${x}px`;
+                    rungDiv.style.top = `${y - 1}px`; // 1px 위로 올려서 약간 겹치게 함
+                    container.appendChild(rungDiv);
+                }
+
+                // 2. 가로 연결대 (numLines 
