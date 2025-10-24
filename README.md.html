@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사다리게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .setup {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .names-container,
+        .results-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .names-container input,
+        .results-container input {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        #ladderCanvas {
+            display: block;
+            margin: 30px auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .player-names,
+        .result-names {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+
+        .name-item {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .name-item:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .name-item.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .result-item {
+            padding: 8px 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 1.5em;
+            margin: 20px 0;
+            padding: 20px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 10px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #gameArea {
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 사다리게임</h1>
+        
+        <div id="setupArea" class="setup">
+            <div class="input-group">
+                <label>참가자 수 (2-8명)</label>
+                <input type="number" id="playerCount" min="2" max="8" value="4">
+            </div>
+            
+            <div class="input-group">
+                <label>참가자 이름</label>
+                <div class="names-container" id="playerNames"></div>
+            </div>
+            
+            <div class="input-group">
+                <label>결과 항목</label>
+                <div class="results-container" id="resultItems"></div>
+            </div>
+            
+            <div class="btn-container">
+                <button onclick="generateLadder()">사다리 생성</button>
+            </div>
+        </div>
+        
+        <div id="gameArea" class="hidden">
+            <div class="player-names" id="topNames"></div>
+            <canvas id="ladderCanvas"></canvas>
+            <div class="result-names" id="bottomResults"></div>
+            <div id="resultMessage"></div>
+            <div class="btn-container">
+                <button onclick="resetGame()">다시 하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+        let results = [];
+        let ladder = [];
+        let currentPath = [];
+
+        // 초기 입력 필드 생성
+        document.getElementById('playerCount').addEventListener('input', updateInputFields);
+        updateInputFields();
+
+        function updateInputFields() {
+            const count = parseInt(document.getElementById('playerCount').value) || 4;
+            const playerNamesDiv = document.getElementById('playerNames');
+            const resultItemsDiv = document.getElementById('resultItems');
+            
+            playerNamesDiv.innerHTML = '';
+            resultItemsDiv.innerHTML = '';
+            
+            for (let i = 0; i < count; i++) {
+                const playerInput = document.createElement('input');
+                playerInput.type = 'text';
+                playerInput.placeholder = `참가자 ${i + 1}`;
+                playerInput.value = `참가자 ${i + 1}`;
+                playerNamesDiv.appendChild(playerInput);
+                
+                const resultInput = document.createElement('input');
+                resultInput.type = 'text';
+                resultInput.placeholder = `결과 ${i + 1}`;
+                resultInput.value = `결과 ${i + 1}`;
+                resultItemsDiv.appendChild(resultInput);
+            }
+        }
+
+        function generateLadder() {
+            // 입력값 수집
+            players = Array.from(document.getElementById('playerNames').children)
+                .map(input => input.value || '참가자');
+            results = Array.from(document.getElementById('resultItems').children)
+                .map(input => input.value || '결과');
+            
+            const playerCount = players.length;
+            
+            // 사다리 생성
+            ladder = [];
+            const height = 10; // 사다리 높이
+            
+            for (let i = 0; i < height; i++) {
+                const row = [];
+                for (let j = 0; j < playerCount - 1; j++) {
+                    // 랜덤하게 가로선 생성 (50% 확률)
+                    row.push(Math.random() > 0.5);
+                }
+                ladder.push(row);
+            }
+            
+            // 각 열에 최소 1개의 가로선 보장
+            for (let j = 0; j < playerCount - 1; j++) {
+                let hasLine = ladder.some(row => row[j]);
+                if (!hasLine) {
+                    const randomRow = Math.floor(Math.random() * height);
+                    ladder[randomRow][j] = true;
+                }
+            }
+            
+            // UI 전환
+            document.getElementById('setupArea').classList.add('hidden');
+            document.getElementById('gameArea').classList.remove('hidden');
+            
+            drawLadder();
+        }
+
+        function drawLadder() {
+            const canvas = document.getElementById('ladderCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const playerCount = players.length;
+            const width = Math.min(800, playerCount * 100 + 100);
+            const height = 500;
+            canvas.width = width;
+            canvas.height = height;
+            
+            const spacing = (width - 100) / (playerCount - 1);
+            const rowHeight = (height - 100) / ladder.length;
+            
+            // 배경 클리어
+            ctx.clearRect(0, 0, width, height);
+            
+            // 세로선 그리기
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            
+            for (let i = 0; i < playerCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(50 + i * spacing, 30);
+                ctx.lineTo(50 + i * spacing, height - 30);
+                ctx.stroke();
+            }
+            
+            // 가로선 그리기
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            
+            for (let i = 0; i < ladder.length; i++) {
+                for (let j = 0; j < ladder[i].length; j++) {
+                    if (ladder[i][j]) {
+                        const y = 30 + (i + 0.5) * rowHeight;
+                        ctx.beginPath();
+                        ctx.moveTo(50 + j * spacing, y);
+                        ctx.lineTo(50 + (j + 1) * spacing, y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // 상단 참가자 이름 표시
+            const topNames = document.getElementById('topNames');
+            topNames.innerHTML = '';
+            players.forEach((player, i) => {
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'name-item';
+                nameDiv.textContent = player;
+                nameDiv.onclick = () => tracePath(i);
+                topNames.appendChild(nameDiv);
+            });
+            
+            // 하단 결과 표시
+            const bottomResults = document.getElementById('bottomResults');
+            bottomResults.innerHTML = '';
+            results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-item';
+                resultDiv.textContent = result;
+                bottomResults.appendChild(resultDiv);
+            });
+        
